@@ -56,6 +56,13 @@ NSString *const RVDocumentContainersDidChangeNotification = @"RVDocumentContaine
 
 #pragma mark -
 
+- (BOOL)canOpenURL:(NSURL *)URL
+{
+	return !URL || [URL RV_isFolder];
+}
+
+#pragma mark -
+
 - (void)containerContentsDidChange:(NSNotification *)aNotif
 {
 	[self PG_postNotificationName:RVDocumentContainersDidChangeNotification];

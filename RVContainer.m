@@ -78,7 +78,7 @@ NSString *const RVContainerContentsDidChangeNotification = @"RVContainerContents
 - (NSArray *)contents
 {
 	if(!_cachedContents) {
-		_cachedContents = [[[[NSFileManager defaultManager] contentsOfDirectoryAtURL:_URL includingPropertiesForKeys:nil options:NSDirectoryEnumerationSkipsHiddenFiles error:NULL] sortedArrayUsingSelector:@selector(RV_localizedNameCompare:)] copy];
+		_cachedContents = [[[[NSFileManager defaultManager] contentsOfDirectoryAtURL:_URL includingPropertiesForKeys:nil options:NSDirectoryEnumerationSkipsHiddenFiles error:NULL] sortedArrayUsingSelector:@selector(RV_nameCompare:)] copy];
 	}
 	return _cachedContents;
 }
@@ -115,7 +115,7 @@ NSString *const RVContainerContentsDidChangeNotification = @"RVContainerContents
 }
 - (NSArray *)contents
 {
-	return [[[NSFileManager defaultManager] mountedVolumeURLsIncludingResourceValuesForKeys:nil options:NSVolumeEnumerationSkipHiddenVolumes] sortedArrayUsingSelector:@selector(RV_localizedNameCompare:)];
+	return [[[NSFileManager defaultManager] mountedVolumeURLsIncludingResourceValuesForKeys:nil options:NSVolumeEnumerationSkipHiddenVolumes] sortedArrayUsingSelector:@selector(RV_nameCompare:)];
 }
 
 @end

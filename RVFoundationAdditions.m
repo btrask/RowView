@@ -139,10 +139,10 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 	for(; i--; URL = [URL URLByDeletingLastPathComponent]) [URLs addObject:URL];
 	return URLs;
 }
-- (NSComparisonResult)RV_localizedNameCompare:(NSURL *)URL
+- (NSComparisonResult)RV_nameCompare:(NSURL *)URL
 {
 	NSString *n1 = nil, *n2 = nil;
-	if(![self getResourceValue:&n1 forKey:NSURLLocalizedNameKey error:NULL] || ![URL getResourceValue:&n2 forKey:NSURLLocalizedNameKey error:NULL]) return NSOrderedSame;
+	if(![self getResourceValue:&n1 forKey:NSURLNameKey error:NULL] || ![URL getResourceValue:&n2 forKey:NSURLNameKey error:NULL]) return NSOrderedSame;
 	return [n1 PG_localizedCaseInsensitiveNumericCompare:n2];
 }
 

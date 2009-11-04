@@ -44,6 +44,8 @@ extern NSString *const RVContainerContentsDidChangeNotification;
 
 - (id)initWithURL:(NSURL *)URL;
 
+- (void)eventDidOccur:(NSNotification *)aNotif;
+
 @end
 
 @interface RVRootContainer : RVContainer

@@ -28,9 +28,19 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 {
 	@private
 	IBOutlet NSTableView *tableView;
+	IBOutlet NSTableColumn *nameColumn;
+	IBOutlet NSTableColumn *kindColumn;
+	IBOutlet NSTableColumn *appColumn;
+	IBOutlet NSTableColumn *dateModifiedColumn;
+	IBOutlet NSTableColumn *sizeColumn;
 }
 
 - (IBAction)open:(id)sender;
+- (IBAction)openWith:(id)sender;
+
+- (void)openURL:(NSURL *)URL;
+- (NSMenuItem *)openWithItemWithTitle:(NSString *)title fileURL:(NSURL *)fileURL applicationURL:(NSURL *)appURL;
+- (NSMenu *)openWithMenuForFileURL:(NSURL *)URL;
 
 - (NSURL *)URLAtIndex:(NSInteger)row container:(out RVContainer **)outContainer;
 - (NSInteger)getContainer:(out RVContainer **)outContainer forIndex:(NSInteger)row;

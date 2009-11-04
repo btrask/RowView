@@ -31,4 +31,8 @@ extern NSString *const RVDocumentContainersDidChangeNotification;
 
 @property(readonly) NSArray *containers;
 
+- (BOOL)canOpenURL:(NSURL *)URL;
+
+- (void)containerContentsDidChange:(NSNotification *)aNotif;
+
 @end

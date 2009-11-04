@@ -30,6 +30,15 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 // Other Sources
 #import "RVFoundationAdditions.h"
 
+static NSString *const RVApplicationURLKey = @"RVApplicationURL";
+static NSString *const RVFileURLKey = @"RVFileURL";
+
+@interface NSObject(Invalid)
+
+- (IBAction)invalidAction:(id)sender;
+
+@end
+
 @implementation RVWindowController
 
 #pragma mark -RVWindowController
@@ -37,11 +46,65 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 - (IBAction)open:(id)sender
 {
 	NSURL *const URL = [self URLAtIndex:[sender selectedRow] container:NULL];
-	if(!URL || [URL RV_isFolder]) {
-		[[self document] setFileURL:URL];
-		[tableView selectRowIndexes:[NSIndexSet indexSet] byExtendingSelection:NO];
-		[tableView scrollRectToVisible:NSZeroRect];
-	} else [[NSWorkspace sharedWorkspace] openURL:URL];
+	if([[self document] canOpenURL:URL]) [self openURL:URL];
+	else [[NSWorkspace sharedWorkspace] openURL:URL];
+}
+- (IBAction)openWith:(id)sender
+{
+	NSDictionary *const dict = [sender representedObject];
+	[[NSWorkspace sharedWorkspace] openFile:[[dict objectForKey:RVFileURLKey] path] withApplication:[[dict objectForKey:RVApplicationURLKey] path]];
+}
+
+#pragma mark -
+
+- (void)openURL:(NSURL *)URL
+{
+	if(![[self document] canOpenURL:URL]) return;
+	[[self document] setFileURL:URL];
+	[tableView selectRowIndexes:[NSIndexSet indexSet] byExtendingSelection:NO];
+	[tableView scrollRectToVisible:NSZeroRect];
+}
+- (NSMenuItem *)openWithItemWithTitle:(NSString *)title fileURL:(NSURL *)fileURL applicationURL:(NSURL *)appURL
+{
+	NSString *label = title;
+	if(!label) [appURL getResourceValue:&label forKey:NSURLNameKey error:NULL];
+	if(!label) label = @"";
+	NSMenuItem *const item = [[[NSMenuItem alloc] initWithTitle:label action:@selector(openWith:) keyEquivalent:@""] autorelease];
+	[item setTarget:self];
+	[item setRepresentedObject:[NSDictionary dictionaryWithObjectsAndKeys:
+		fileURL, RVFileURLKey,
+		appURL, RVApplicationURLKey,
+		nil]];
+	return item;
+}
+- (NSMenu *)openWithMenuForFileURL:(NSURL *)fileURL
+{
+	NSMenu *const menu = [[[NSMenu alloc] init] autorelease];
+	NSMutableArray *const appURLs = [[[(NSArray *)LSCopyApplicationURLsForURL((CFURLRef)fileURL, kLSRolesViewer | kLSRolesEditor) autorelease] mutableCopy] autorelease];
+	[appURLs removeObject:fileURL];
+	NSURL *preferredAppURL = nil;
+	if(![[self document] canOpenURL:fileURL]) {
+		(void)LSGetApplicationForURL((CFURLRef)fileURL, kLSRolesViewer | kLSRolesEditor, NULL, (CFURLRef *)&preferredAppURL);
+		[preferredAppURL autorelease];
+	}
+	NSString *label = nil;
+	if(preferredAppURL && ![fileURL isEqual:preferredAppURL]) {
+		[appURLs removeObject:preferredAppURL];
+		[preferredAppURL getResourceValue:&label forKey:NSURLNameKey error:NULL];
+	}
+	[menu addItemWithTitle:label ? label : @"--" action:NULL keyEquivalent:@""];
+	NSURL *const currentAppURL = [[NSRunningApplication currentApplication] bundleURL];
+	if([appURLs containsObject:currentAppURL]) {
+		[appURLs removeObject:currentAppURL];
+		[menu addItem:[self openWithItemWithTitle:NSLocalizedString(@"New Window", @"Open With menu item label.") fileURL:fileURL applicationURL:currentAppURL]];
+		if([appURLs count]) [menu addItem:[NSMenuItem separatorItem]];
+	}
+	if(![appURLs count]) {
+		[menu addItemWithTitle:NSLocalizedString(@"No Available Applications", @"Open With placeholder menu item label.") action:@selector(invalidAction:) keyEquivalent:@""];
+		return menu;
+	}
+	for(NSURL *const appURL in [appURLs sortedArrayUsingSelector:@selector(RV_nameCompare:)]) [menu addItem:[self openWithItemWithTitle:nil fileURL:fileURL applicationURL:appURL]];
+	return menu;
 }
 
 #pragma mark -
@@ -136,16 +199,24 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 	RVContainer *container = nil;
 	NSURL *const URL = [self URLAtIndex:row container:&container];
 	id value = nil;
-	if(container && [NSURLNameKey isEqualToString:[tableColumn identifier]]) value = [container name];
-	else (void)[URL getResourceValue:&value forKey:[tableColumn identifier] error:NULL];
-	if(!value) return @"--";
-	if([NSURLFileSizeKey isEqualToString:[tableColumn identifier]]) return [value PG_localizedStringAsBytes];
-	if([NSURLContentModificationDateKey isEqualToString:[tableColumn identifier]]) return [value PG_localizedStringWithDateStyle:kCFDateFormatterShortStyle timeStyle:kCFDateFormatterShortStyle];
-	return value;
+	if(tableColumn == nameColumn) {
+		value = [container name];
+		if(!value) [URL getResourceValue:&value forKey:NSURLNameKey error:NULL];
+	} else if(tableColumn == kindColumn) {
+		[URL getResourceValue:&value forKey:NSURLLocalizedTypeDescriptionKey error:NULL];
+	} else if(tableColumn == appColumn) {
+	} else if(tableColumn == dateModifiedColumn) {
+		[URL getResourceValue:&value forKey:NSURLContentModificationDateKey error:NULL];
+		value = [value PG_localizedStringWithDateStyle:kCFDateFormatterShortStyle timeStyle:kCFDateFormatterShortStyle];
+	} else if(tableColumn == sizeColumn) {
+		[URL getResourceValue:&value forKey:NSURLFileSizeKey error:NULL];
+		value = [value PG_localizedStringAsBytes];
+	}
+	return value ? value : @"--";
 }
 - (void)tableView:(NSTableView *)tableView setObjectValue:(id)object forTableColumn:(NSTableColumn *)tableColumn row:(NSInteger)row
 {
-	if([NSURLNameKey isEqualToString:[tableColumn identifier]]) [[self URLAtIndex:row container:NULL] setResourceValue:object forKey:NSURLNameKey error:NULL];
+	if(tableColumn == nameColumn) [[self URLAtIndex:row container:NULL] setResourceValue:object forKey:NSURLNameKey error:NULL];
 }
 
 #pragma mark -<NSTableViewDelegate>
@@ -153,9 +224,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 - (void)tableView:(NSTableView *)tableView willDisplayCell:(id)cell forTableColumn:(NSTableColumn *)tableColumn row:(NSInteger)row
 {
 	NSURL *const URL = [self URLAtIndex:row container:NULL];
-	BOOL bold = NO;
-	if([NSURLNameKey isEqualToString:[tableColumn identifier]]) bold = [URL RV_isFolder];
-	[cell setFont:bold ? [NSFont boldSystemFontOfSize:11.0f] : [NSFont systemFontOfSize:11.0f]];
+	if(tableColumn == nameColumn) {
+		[cell setFont:[URL RV_isFolder] ? [NSFont boldSystemFontOfSize:11.0f] : [NSFont systemFontOfSize:11.0f]];
+	} else if(tableColumn == appColumn) {
+		[cell setMenu:[self openWithMenuForFileURL:URL]];
+	}
 }
 - (BOOL)tableView:(NSTableView *)tableView shouldEditTableColumn:(NSTableColumn *)tableColumn row:(NSInteger)row
 {

@@ -54,6 +54,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 
 - (BOOL)RV_isFolder;
 - (NSArray *)RV_componentURLs;
-- (NSComparisonResult)RV_localizedNameCompare:(NSURL *)URL;
+- (NSComparisonResult)RV_nameCompare:(NSURL *)URL;
 
 @end
