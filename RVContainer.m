@@ -68,7 +68,7 @@ NSString *const RVContainerContentsDidChangeNotification = @"RVContainerContents
 - (NSString *)name
 {
 	NSString *name = nil;
-	(void)[_URL getResourceValue:&name forKey:NSURLNameKey error:NULL];
+	(void)[_URL getResourceValue:&name forKey:NSURLLocalizedNameKey error:NULL];
 	return name ? name : @"";
 }
 - (NSURL *)URL

@@ -67,7 +67,7 @@ static NSString *const RVFileURLKey = @"RVFileURL";
 - (NSMenuItem *)openWithItemWithTitle:(NSString *)title fileURL:(NSURL *)fileURL applicationURL:(NSURL *)appURL
 {
 	NSString *label = title;
-	if(!label) [appURL getResourceValue:&label forKey:NSURLNameKey error:NULL];
+	if(!label) [appURL getResourceValue:&label forKey:NSURLLocalizedNameKey error:NULL];
 	if(!label) label = @"";
 	NSMenuItem *const item = [[[NSMenuItem alloc] initWithTitle:label action:@selector(openWith:) keyEquivalent:@""] autorelease];
 	[item setTarget:self];
@@ -90,7 +90,7 @@ static NSString *const RVFileURLKey = @"RVFileURL";
 	NSString *label = nil;
 	if(preferredAppURL && ![fileURL isEqual:preferredAppURL]) {
 		[appURLs removeObject:preferredAppURL];
-		[preferredAppURL getResourceValue:&label forKey:NSURLNameKey error:NULL];
+		[preferredAppURL getResourceValue:&label forKey:NSURLLocalizedNameKey error:NULL];
 	}
 	[menu addItemWithTitle:label ? label : @"--" action:NULL keyEquivalent:@""];
 	NSURL *const currentAppURL = [[NSRunningApplication currentApplication] bundleURL];
@@ -201,7 +201,7 @@ static NSString *const RVFileURLKey = @"RVFileURL";
 	id value = nil;
 	if(tableColumn == nameColumn) {
 		value = [container name];
-		if(!value) [URL getResourceValue:&value forKey:NSURLNameKey error:NULL];
+		if(!value) [URL getResourceValue:&value forKey:NSURLLocalizedNameKey error:NULL];
 	} else if(tableColumn == kindColumn) {
 		[URL getResourceValue:&value forKey:NSURLLocalizedTypeDescriptionKey error:NULL];
 	} else if(tableColumn == appColumn) {
