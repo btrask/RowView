@@ -33,5 +33,11 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 	[openPanel setCanChooseFiles:NO];
 	return [super runModalOpenPanel:openPanel forTypes:types];
 }
+- (id)makeUntitledDocumentOfType:(NSString *)typeName error:(NSError **)outError
+{
+	id const doc = [super makeUntitledDocumentOfType:typeName error:outError];
+	[doc setFileURL:[NSURL fileURLWithPath:[@"~" stringByExpandingTildeInPath]]];
+	return doc;
+}
 
 @end
