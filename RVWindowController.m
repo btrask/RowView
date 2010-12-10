@@ -94,11 +94,16 @@ static NSString *const RVFileURLKey = @"RVFileURL";
 	NSMutableArray *const appURLs = [[[(NSArray *)LSCopyApplicationURLsForURL((CFURLRef)fileURL, kLSRolesViewer | kLSRolesEditor) autorelease] mutableCopy] autorelease];
 	[appURLs removeObject:fileURL];
 
+	BOOL hasPrimary = NO;
 	NSURL *const currentAppURL = [[NSRunningApplication currentApplication] bundleURL];
-	if(fileURL && [[self document] canOpenURL:fileURL]) [menu addItem:[self openWithItemWithTitle:NSLocalizedString(@"Open", @"Open With menu item label.") fileURL:fileURL applicationURL:nil]];
+	if(fileURL && [[self document] canOpenURL:fileURL]) {
+		[menu addItem:[self openWithItemWithTitle:NSLocalizedString(@"Open", @"Open With menu item label.") fileURL:fileURL applicationURL:nil]];
+		hasPrimary = YES;
+	}
 	if([appURLs containsObject:currentAppURL]) {
 		[appURLs removeObject:currentAppURL];
 		[menu addItem:[self openWithItemWithTitle:NSLocalizedString(@"New Window", @"Open With menu item label.") fileURL:fileURL applicationURL:currentAppURL]];
+		hasPrimary = YES;
 	}
 	NSURL *preferredAppURL = nil;
 	if(fileURL && ![[self document] canOpenURL:fileURL]) {
@@ -107,10 +112,11 @@ static NSString *const RVFileURLKey = @"RVFileURL";
 		if(preferredAppURL && ![fileURL isEqual:preferredAppURL]) {
 			[appURLs removeObject:preferredAppURL];
 			[menu addItem:[self openWithItemWithTitle:nil fileURL:fileURL applicationURL:preferredAppURL]];
+			hasPrimary = YES;
 		}
 	}
 
-	if([appURLs count]) [menu addItem:[NSMenuItem separatorItem]];
+	if(hasPrimary && [appURLs count]) [menu addItem:[NSMenuItem separatorItem]];
 	for(NSURL *const appURL in [appURLs sortedArrayUsingSelector:@selector(RV_nameCompare:)]) [menu addItem:[self openWithItemWithTitle:nil fileURL:fileURL applicationURL:appURL]];
 
 	if([menu numberOfItems] <= 1) [menu addItemWithTitle:NSLocalizedString(@"No Available Applications", @"Open With placeholder menu item label.") action:@selector(invalidAction:) keyEquivalent:@""];
