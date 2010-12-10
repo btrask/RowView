@@ -45,27 +45,35 @@ static NSString *const RVFileURLKey = @"RVFileURL";
 
 - (IBAction)open:(id)sender
 {
-	NSURL *const URL = [self URLAtIndex:[sender selectedRow] container:NULL];
-	if([[self document] canOpenURL:URL]) [self openURL:URL];
-	else [[NSWorkspace sharedWorkspace] openURL:URL];
+	NSUInteger i;
+	NSIndexSet *const rows = [sender selectedRowIndexes];
+	for(i = [rows firstIndex]; NSNotFound != i; i = [rows indexGreaterThanIndex:i]) {
+		NSURL *const URL = [self URLAtIndex:i container:NULL];
+		if(![self openURL:URL]) [[NSWorkspace sharedWorkspace] openURL:URL];
+	}
 }
 - (IBAction)openWith:(id)sender
 {
 	NSDictionary *const dict = [sender representedObject];
-	[[NSWorkspace sharedWorkspace] openFile:[[dict objectForKey:RVFileURLKey] path] withApplication:[[dict objectForKey:RVApplicationURLKey] path]];
+	NSURL *const fileURL = [dict objectForKey:RVFileURLKey];
+	NSURL *const appURL = [dict objectForKey:RVApplicationURLKey];
+	if(appURL) [[NSWorkspace sharedWorkspace] openFile:[fileURL path] withApplication:[appURL path]];
+	else [self openURL:fileURL];
 }
 
 #pragma mark -
 
-- (void)openURL:(NSURL *)URL
+- (BOOL)openURL:(NSURL *)URL
 {
-	if(![[self document] canOpenURL:URL]) return;
+	if(![[self document] canOpenURL:URL]) return NO;
 	[[self document] setFileURL:URL];
 	[tableView selectRowIndexes:[NSIndexSet indexSet] byExtendingSelection:NO];
 	[tableView scrollRectToVisible:NSZeroRect];
+	return YES;
 }
 - (NSMenuItem *)openWithItemWithTitle:(NSString *)title fileURL:(NSURL *)fileURL applicationURL:(NSURL *)appURL
 {
+	NSParameterAssert(fileURL);
 	NSString *label = title;
 	if(!label) [appURL getResourceValue:&label forKey:NSURLLocalizedNameKey error:NULL];
 	if(!label) label = @"";
@@ -80,30 +88,33 @@ static NSString *const RVFileURLKey = @"RVFileURL";
 - (NSMenu *)openWithMenuForFileURL:(NSURL *)fileURL
 {
 	NSMenu *const menu = [[[NSMenu alloc] init] autorelease];
+	NSString *kind = nil;
+	[fileURL getResourceValue:&kind forKey:NSURLLocalizedTypeDescriptionKey error:NULL];
+	[menu addItemWithTitle:kind ? kind : @"--" action:NULL keyEquivalent:@""];
 	NSMutableArray *const appURLs = [[[(NSArray *)LSCopyApplicationURLsForURL((CFURLRef)fileURL, kLSRolesViewer | kLSRolesEditor) autorelease] mutableCopy] autorelease];
 	[appURLs removeObject:fileURL];
-	NSURL *preferredAppURL = nil;
-	if(![[self document] canOpenURL:fileURL]) {
-		(void)LSGetApplicationForURL((CFURLRef)fileURL, kLSRolesViewer | kLSRolesEditor, NULL, (CFURLRef *)&preferredAppURL);
-		[preferredAppURL autorelease];
-	}
-	NSString *label = nil;
-	if(preferredAppURL && ![fileURL isEqual:preferredAppURL]) {
-		[appURLs removeObject:preferredAppURL];
-		[preferredAppURL getResourceValue:&label forKey:NSURLLocalizedNameKey error:NULL];
-	}
-	[menu addItemWithTitle:label ? label : @"--" action:NULL keyEquivalent:@""];
+
 	NSURL *const currentAppURL = [[NSRunningApplication currentApplication] bundleURL];
+	if(fileURL && [[self document] canOpenURL:fileURL]) [menu addItem:[self openWithItemWithTitle:NSLocalizedString(@"Open", @"Open With menu item label.") fileURL:fileURL applicationURL:nil]];
 	if([appURLs containsObject:currentAppURL]) {
 		[appURLs removeObject:currentAppURL];
 		[menu addItem:[self openWithItemWithTitle:NSLocalizedString(@"New Window", @"Open With menu item label.") fileURL:fileURL applicationURL:currentAppURL]];
-		if([appURLs count]) [menu addItem:[NSMenuItem separatorItem]];
 	}
-	if(![appURLs count]) {
-		[menu addItemWithTitle:NSLocalizedString(@"No Available Applications", @"Open With placeholder menu item label.") action:@selector(invalidAction:) keyEquivalent:@""];
-		return menu;
+	NSURL *preferredAppURL = nil;
+	if(fileURL && ![[self document] canOpenURL:fileURL]) {
+		(void)LSGetApplicationForURL((CFURLRef)fileURL, kLSRolesViewer | kLSRolesEditor, NULL, (CFURLRef *)&preferredAppURL);
+		[preferredAppURL autorelease];
+		if(preferredAppURL && ![fileURL isEqual:preferredAppURL]) {
+			[appURLs removeObject:preferredAppURL];
+			[menu addItem:[self openWithItemWithTitle:nil fileURL:fileURL applicationURL:preferredAppURL]];
+		}
 	}
+
+	if([appURLs count]) [menu addItem:[NSMenuItem separatorItem]];
 	for(NSURL *const appURL in [appURLs sortedArrayUsingSelector:@selector(RV_nameCompare:)]) [menu addItem:[self openWithItemWithTitle:nil fileURL:fileURL applicationURL:appURL]];
+
+	if([menu numberOfItems] <= 1) [menu addItemWithTitle:NSLocalizedString(@"No Available Applications", @"Open With placeholder menu item label.") action:@selector(invalidAction:) keyEquivalent:@""];
+
 	return menu;
 }
 
@@ -203,8 +214,6 @@ static NSString *const RVFileURLKey = @"RVFileURL";
 		value = [container name];
 		if(!value) [URL getResourceValue:&value forKey:NSURLLocalizedNameKey error:NULL];
 	} else if(tableColumn == kindColumn) {
-		[URL getResourceValue:&value forKey:NSURLLocalizedTypeDescriptionKey error:NULL];
-	} else if(tableColumn == appColumn) {
 	} else if(tableColumn == dateModifiedColumn) {
 		[URL getResourceValue:&value forKey:NSURLContentModificationDateKey error:NULL];
 		value = [value PG_localizedStringWithDateStyle:kCFDateFormatterShortStyle timeStyle:kCFDateFormatterShortStyle];
@@ -226,7 +235,7 @@ static NSString *const RVFileURLKey = @"RVFileURL";
 	NSURL *const URL = [self URLAtIndex:row container:NULL];
 	if(tableColumn == nameColumn) {
 		[cell setFont:[URL RV_isFolder] ? [NSFont boldSystemFontOfSize:11.0f] : [NSFont systemFontOfSize:11.0f]];
-	} else if(tableColumn == appColumn) {
+	} else if(tableColumn == kindColumn) {
 		[cell setMenu:[self openWithMenuForFileURL:URL]];
 	}
 }

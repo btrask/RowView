@@ -30,7 +30,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 	IBOutlet NSTableView *tableView;
 	IBOutlet NSTableColumn *nameColumn;
 	IBOutlet NSTableColumn *kindColumn;
-	IBOutlet NSTableColumn *appColumn;
 	IBOutlet NSTableColumn *dateModifiedColumn;
 	IBOutlet NSTableColumn *sizeColumn;
 }
@@ -38,7 +37,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 - (IBAction)open:(id)sender;
 - (IBAction)openWith:(id)sender;
 
-- (void)openURL:(NSURL *)URL;
+- (BOOL)openURL:(NSURL *)URL;
 - (NSMenuItem *)openWithItemWithTitle:(NSString *)title fileURL:(NSURL *)fileURL applicationURL:(NSURL *)appURL;
 - (NSMenu *)openWithMenuForFileURL:(NSURL *)URL;
 

@@ -58,7 +58,8 @@ NSString *const RVDocumentContainersDidChangeNotification = @"RVDocumentContaine
 
 - (BOOL)canOpenURL:(NSURL *)URL
 {
-	return !URL || [URL RV_isFolder];
+	NSParameterAssert(URL);
+	return [URL RV_isFolder];
 }
 
 #pragma mark -
